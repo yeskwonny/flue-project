@@ -1,15 +1,50 @@
 "use agent";
-import { useModel, usePersistentState, useTool } from "@flue/runtime";
+import {
+  useInitialData,
+  useModel,
+  usePersistentState,
+  useTool,
+} from "@flue/runtime";
+import { postMessage } from "../channels/telegram.ts";
 import * as v from "valibot";
 
 type Item = { location: string; previous?: string; updatedAt: string };
 
+const chatData = v.object({
+  type: v.literal("chat"),
+  chatId: v.number(),
+  messageThreadId: v.optional(v.number()),
+  directMessagesTopicId: v.optional(v.number()),
+  chatTitle: v.optional(v.string()),
+});
+
+const businessChatData = v.object({
+  type: v.literal("business-chat"),
+  businessConnectionId: v.string(),
+  chatId: v.number(),
+  messageThreadId: v.optional(v.number()),
+  directMessagesTopicId: v.optional(v.number()),
+  chatTitle: v.optional(v.string()),
+});
+
+const initialDataSchema = v.optional(
+  v.variant("type", [chatData, businessChatData]),
+);
+
 export function WhereIsIt() {
-  useModel("cloudflare/@cf/google/gemma-4-26b-a4b-it");
+  useModel("cloudflare/@cf/google/gemma-4-26b-a4b-it", {
+    thinkingLevel: "off",
+  });
   const [items, setItems] = usePersistentState<Record<string, Item>>(
     "items",
     {},
   );
+  // get message data from telegram and using this tool from telegram
+  const telegram = useInitialData<v.InferOutput<typeof initialDataSchema>>();
+
+  if (telegram) {
+    useTool(postMessage(telegram));
+  }
   useTool({
     name: "record_location",
     description:
@@ -48,6 +83,7 @@ export function WhereIsIt() {
       const matches: (Item & { name: string })[] = [];
       for (const name of Object.keys(items)) {
         console.log("name.includes", name.includes(data.query));
+        console.log("___________________");
         console.log("items[name].location", items[name].location);
         if (name.includes(data.query)) {
           matches.push({
@@ -64,11 +100,15 @@ export function WhereIsIt() {
       return { output: { found: true, matches: matches } };
     },
   });
+
   return `You are an assistant that remembers where the user keeps their belongings.
 - When the user asks where something is, never answer from the conversation history. Always call find_location first.
 - When saving, use only the short item name as "item" (e.g. "passport", not "my passport").
 - If find_location returns nothing, say there is no record. Never guess a location.
 - When found, tell the location and the last recorded date.
 - If several items match, ask which one the user means.
-- If the item or the location is missing, ask for it.`;
+- If the item or the location is missing, ask for it.
+- After moving an item, mention both the previous and the new location.
+- Always send your reply with post_telegram_message when it is available`;
 }
+WhereIsIt.initialData = initialDataSchema;

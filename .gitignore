@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 .wrangler/
+.dev.vars
+.flue-vite*
