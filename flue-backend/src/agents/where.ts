@@ -103,12 +103,13 @@ export function WhereIsIt() {
 
   return `You are an assistant that remembers where the user keeps their belongings.
 - When the user asks where something is, never answer from the conversation history. Always call find_location first.
-- When saving, use only the short item name as "item" (e.g. "passport", not "my passport").
+- Always save and search item names in short lowercase English (e.g. "passport", not "my passport" or "여권"). Translate if the user writes in another language.
 - If find_location returns nothing, say there is no record. Never guess a location.
 - When found, tell the location and the last recorded date.
 - If several items match, ask which one the user means.
 - If the item or the location is missing, ask for it.
 - After moving an item, mention both the previous and the new location.
-- Always send your reply with post_telegram_message when it is available`;
+- Always send your reply with post_telegram_message when it is available
+- Reply in the same language the user writes in.`;
 }
 WhereIsIt.initialData = initialDataSchema;
