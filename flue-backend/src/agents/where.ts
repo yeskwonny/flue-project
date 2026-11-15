@@ -51,7 +51,6 @@ export function WhereIsIt() {
       "Call this whenever the user says they put, stored, or moved an item somewhere. Saves the item name and its location. If the item already exists, the old location is kept as 'previous'.",
     input: v.object({ item: v.string(), location: v.string() }),
     async run({ data }) {
-      console.log("data", data);
       const previous = items[data.item]?.location;
       const updatedAt = new Date().toISOString().slice(0, 10);
       setItems((prev) => ({
@@ -78,13 +77,8 @@ export function WhereIsIt() {
       "Call this whenever the user asks where an item is. Put only the item name in query. Returns matching saved items with their location and last recorded date.",
     input: v.object({ query: v.string() }),
     async run({ data }) {
-      console.log("saved names:", Object.keys(items), "query:", data.query);
-
       const matches: (Item & { name: string })[] = [];
       for (const name of Object.keys(items)) {
-        console.log("name.includes", name.includes(data.query));
-        console.log("___________________");
-        console.log("items[name].location", items[name].location);
         if (name.includes(data.query)) {
           matches.push({
             name,
@@ -96,7 +90,7 @@ export function WhereIsIt() {
       if (matches.length === 0) {
         return { output: { found: false } };
       }
-      console.log("#####matches", matches);
+
       return { output: { found: true, matches: matches } };
     },
   });
