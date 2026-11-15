@@ -1,5 +1,6 @@
 "use agent";
 import {
+  useAgentFinish,
   useInitialData,
   useModel,
   usePersistentState,
@@ -44,6 +45,22 @@ export function WhereIsIt() {
 
   if (telegram) {
     useTool(postMessage(telegram));
+
+    // On Telegram the user only sees what goes through post_telegram_message.
+    // The model sometimes ends a turn without calling it (e.g. off-topic
+    // messages that need no other tool), so nudge it once more before stopping.
+    useAgentFinish(({ response, append }) => {
+      const replied = response.toolCalls.some(
+        (call) => call.tool === "post_telegram_message" && !call.isError,
+      );
+      if (!replied) {
+        append({
+          kind: "signal",
+          type: "reply-reminder",
+          body: "You have not replied to the user yet. Send your reply now with post_telegram_message.",
+        });
+      }
+    });
   }
   useTool({
     name: "record_location",
@@ -115,7 +132,8 @@ Finding
 Replying
 - Reply in the same language the user writes in. Keep replies short.
 - Only say something was saved or updated after the tool call succeeded. If a tool fails, say it failed.
-- When post_telegram_message is available, send exactly one reply per user message with it, and do not write anything else.
+- When post_telegram_message is available, send exactly one reply per user message with it, and do not write anything else. This applies even when no other tool is needed (greetings, details you cannot save, off-topic questions).
+- If the message is not about saving or finding belongings (e.g. weather, news, coding), politely say you can only help with remembering where things are.
 - If the user sends /start or a greeting, briefly explain what you do with one example (e.g. "여권을 침실 서랍에 넣었어").`;
 }
 WhereIsIt.initialData = initialDataSchema;
